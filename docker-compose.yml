@@ -1,0 +1,47 @@
+# ════════════════════════════════════════════════
+#  CHASSIS Game — docker-compose
+#  Usage: docker-compose up --build
+# ════════════════════════════════════════════════
+
+services:
+  chassis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chassis-game
+    ports:
+      - "8000:8000"          # http://localhost:8000
+    environment:
+      - PORT=8000
+      - ENV=development
+    volumes:
+      # Live reload backend in dev (comment out for production)
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+# Notes for cloud deployment:
+# ─────────────────────────────
+# EC2:
+#   docker build -t chassis-game .
+#   docker run -d -p 80:8000 --name chassis chassis-game
+#
+# ECS Fargate:
+#   1. Push image to ECR:
+#      aws ecr create-repository --repository-name chassis-game
+#      docker tag chassis-game:latest <account>.dkr.ecr.<region>.amazonaws.com/chassis-game:latest
+#      aws ecr get-login-password | docker login --username AWS --password-stdin <account>.dkr.ecr.<region>.amazonaws.com
+#      docker push <account>.dkr.ecr.<region>.amazonaws.com/chassis-game:latest
+#   2. Create ECS task definition with:
+#      - Container: chassis-game, image from ECR
+#      - Port 8000 mapped
+#      - ENV PORT=8000
+#      - Health check: /api/health
+#   3. Create ECS service (Fargate launch type)
+#   4. Attach ALB on port 80 → target group port 8000

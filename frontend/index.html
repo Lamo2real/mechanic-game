@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CHASSIS — Automotive Engineering Sandbox</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     CHASSIS SELECT SCREEN (startup overlay)
+════════════════════════════════════════════ -->
+<div id="chassis-select-screen">
+  <div class="css-logo">CHASSIS</div>
+  <div class="css-subtitle">AUTOMOTIVE ENGINEERING SANDBOX</div>
+  <div style="font-size:12px;color:#506070;margin-top:-20px;letter-spacing:1px;">SELECT YOUR PLATFORM</div>
+  <div class="chassis-select-grid" id="chassis-select-grid">
+    <!-- Filled by JS -->
+  </div>
+  <div style="font-size:10px;color:#303846;margin-top:8px;">
+    All chassis accept almost any engine · Fabrication simulated · Real-world physics
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PART DETAIL MODAL
+════════════════════════════════════════════ -->
+<div id="part-detail-modal" class="hidden" style="position:fixed;">
+  <div class="modal-box" style="position:relative;">
+    <button class="modal-close" id="modal-close-x" onclick="document.getElementById('part-detail-modal').classList.add('hidden')">✕</button>
+    <div class="modal-title"></div>
+    <div class="modal-brand"></div>
+    <div class="modal-desc"></div>
+    <div class="modal-fab-list" style="display:none;">
+      <div class="modal-fab-title">Fabrication Required</div>
+    </div>
+    <div class="modal-specs"></div>
+    <div class="modal-actions" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN APP LAYOUT
+════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- ── Top Bar ── -->
+  <div id="topbar">
+    <div class="logo">CHASSIS</div>
+    <div class="topbar-sep"></div>
+    <div class="build-name" id="build-name">— Select a Chassis —</div>
+    <div style="flex:1"></div>
+    <button class="topbar-btn" id="new-build-btn">🚗 New Build</button>
+    <div class="topbar-sep"></div>
+    <button class="topbar-btn primary" id="test-drive-btn">🏁 TEST DRIVE</button>
+  </div>
+
+  <!-- ── Left Sidebar: Parts Catalog ── -->
+  <div id="sidebar">
+    <div class="search-box">
+      <input
+        type="text"
+        class="search-input"
+        id="search-input"
+        placeholder="Search parts: S58, Brembo, Titanium..."
+      />
+    </div>
+    <div class="category-tabs" id="category-tabs">
+      <!-- Filled by JS -->
+    </div>
+    <div class="parts-list" id="parts-list">
+      <!-- Filled by JS -->
+    </div>
+  </div>
+
+  <!-- ── Center: 3D Garage Viewport ── -->
+  <div id="viewport">
+    <canvas id="three-canvas"></canvas>
+
+    <!-- Camera mode buttons -->
+    <div class="camera-controls">
+      <button class="cam-btn active" data-mode="garage">GARAGE</button>
+      <button class="cam-btn" data-mode="enginebay">ENGINE BAY</button>
+      <button class="cam-btn" data-mode="front">FRONT</button>
+      <button class="cam-btn" data-mode="rear">REAR</button>
+      <button class="cam-btn" data-mode="top">TOP</button>
+    </div>
+
+    <!-- Notification banner -->
+    <div id="notification" class="notification hidden"></div>
+
+    <!-- Action bar -->
+    <div class="part-action-bar">
+      <button class="action-btn remove" onclick="document.getElementById('chassis-select-screen').classList.remove('hidden')">
+        CHANGE CHASSIS
+      </button>
+    </div>
+
+    <!-- Test Drive HUD -->
+    <div id="hud">
+      <div class="hud-gear" id="hud-gear">1</div>
+      <div class="hud-speed">
+        <span id="hud-speed">0</span>
+        <span class="hud-speed-unit">MPH</span>
+      </div>
+      <div class="hud-rpm-bar">
+        <div style="font-size:9px;color:#506070;text-align:center;margin-bottom:3px;letter-spacing:2px;">RPM</div>
+        <div class="rpm-track">
+          <div class="rpm-fill" id="rpm-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="hud-warning" id="hud-warning"></div>
+      <button class="hud-exit" id="hud-exit">■ EXIT</button>
+    </div>
+  </div>
+
+  <!-- ── Right Panel: Stats ── -->
+  <div id="stats">
+
+    <!-- Chassis info -->
+    <div class="panel-section">
+      <div class="panel-title">Build Slots</div>
+      <div class="slots-grid" id="build-slots">
+        <div style="color:var(--text-dim);font-size:11px;padding:8px;text-align:center;">
+          Select a chassis to begin
+        </div>
+      </div>
+    </div>
+
+    <!-- ECU Tune -->
+    <div class="panel-section">
+      <div class="panel-title">ECU Tune</div>
+      <div id="tune-panel">
+        <div style="color:var(--text-dim);font-size:11px;">Install a build to access tuning</div>
+      </div>
+    </div>
+
+    <!-- Dyno Chart -->
+    <div class="panel-section">
+      <div class="panel-title">Dyno Chart</div>
+      <div class="dyno-chart">
+        <canvas id="dyno-canvas" width="280" height="120"></canvas>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:6px;">
+        <span style="font-size:10px;color:#ff6b00;">— HP</span>
+        <span style="font-size:10px;color:#3b82f6;">— Torque</span>
+      </div>
+    </div>
+
+    <!-- Performance Stats -->
+    <div class="panel-section">
+      <div class="panel-title">Performance</div>
+      <div id="physics-stats">
+        <div style="color:var(--text-dim);font-size:11px;">No data yet</div>
+      </div>
+    </div>
+
+    <!-- Warnings -->
+    <div class="panel-section">
+      <div class="panel-title">Diagnostics</div>
+      <div class="warning-list" id="warnings-list">
+        <div class="warning-item ok">✅ System nominal</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Status Bar ── -->
+  <div id="statusbar">
+    <div class="status-item">
+      <div class="status-dot green" id="api-dot"></div>
+      <span id="api-status">API Connected</span>
+    </div>
+    <div class="status-item">
+      <span id="part-count">Loading parts...</span>
+    </div>
+    <div style="flex:1"></div>
+    <div class="status-item">
+      <span style="color:#3a4560">CHASSIS v1.0 · Automotive Engineering Sandbox</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════
+     Scripts — Three.js r128, then game code
+════════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/scene3d.js"></script>
+<script src="/js/ui.js"></script>
+
+<script>
+(async () => {
+  // Init 3D scene
+  const canvas = document.getElementById('three-canvas');
+  canvas.width  = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  Scene3D.init(canvas);
+
+  // Check API health
+  try {
+    const health = await API.get('/health');
+    document.getElementById('api-dot').className    = 'status-dot green';
+    document.getElementById('api-status').textContent  = 'API Connected';
+    document.getElementById('part-count').textContent  =
+      `${health.engines} engines · ${health.chassis} chassis · ${health.total_parts} total parts`;
+  } catch {
+    document.getElementById('api-dot').className    = 'status-dot red';
+    document.getElementById('api-status').textContent  = 'API Offline';
+    document.getElementById('part-count').textContent  = 'Backend not reachable';
+  }
+
+  // Init UI
+  await UI.init();
+
+  // Render chassis select (triggered inside UI.init via bindEvents)
+  // Tune panel refresh when chassis is selected
+  document.addEventListener('build-loaded', () => {
+    UI.renderTunePanel();
+  });
+})();
+</script>
+
+</body>
+</html>
